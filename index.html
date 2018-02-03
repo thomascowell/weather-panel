@@ -181,7 +181,8 @@
 				$("#rain #value").html(storm["RainRate"]);
 				$("#rain .minmax #value").html(storm["RainDaily"]);
 
-				$("#last_received #value").html(bloomsky["TS"]); // TODO: translate timestamp
+				var lastReceived = new Date(bloomsky["TS"]*1000);
+				$("#last_received #value").html(lastReceived.format('HH:MM dd/mm/yy')); // TODO: translate timestamp
 			});
 
 			setTimeout(updateDashboard, 30000);
@@ -195,10 +196,22 @@
 			setTimeout(updateClock, 1000);
 		}
 
+		function reloadPage()
+		{
+			window.location.reload(true);
+		}
+
+		function convertTimestamp(ts)
+		{
+			var date = new Date(ts*1000);
+		}
+
 		$(function() {
 			$.ajaxSetup({ cache: false });
 		    updateDashboard();
 		    updateClock();
+
+		    setTimeout(reloadPage, 1000*60*30);
 		});
 	</script>
 </html>
