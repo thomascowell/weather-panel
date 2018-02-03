@@ -1,0 +1,204 @@
+<html>
+<head>
+	<script src="jquery-3.2.1.js"></script>
+	<script src="date.format.js"></script>
+	<style>
+		* { 
+		    -moz-box-sizing: border-box; 
+		    -webkit-box-sizing: border-box; 
+		     box-sizing: border-box; 
+		}
+
+		body {
+			background-color: black;
+			color: white;
+			font-family: Tahoma;
+			margin:0;
+			padding:0;
+		}
+		#container {
+			width:800px;
+			height:480px;
+			border-style:solid;
+			border-color:white;
+		}
+
+		#header {
+			padding:5px;
+			width:100%;
+			border-bottom-style:dashed;
+			border-color:white;
+			text-align:center;
+		}
+
+		#header  { /*height: 25px;*/  }
+		#content { height: 420px; }
+		#footer  { /*height: 25px;*/  }
+
+		#header .child {
+			/*margin-top:5;*/
+		}
+
+		#header #location {
+			float:left;
+		}
+
+		#header #power #value {
+
+		}
+
+		#header #time {
+			margin: 0 auto;
+		}
+
+		#header #date {
+			float:right;
+			display:inline-block;
+			/*display:table-cell;*/
+		}
+
+		#content {
+			
+		}
+
+		#content .item {
+			padding:20;
+			padding-bottom:0;
+			font-size:43pt;
+			width:265px;
+			float:left;
+			/*border: solid white*/
+		}
+
+		#content .item .title {
+			font-size:10pt;
+			font-weight:bold;
+		}
+
+		#content .item .minmax {
+			font-size:10pt;
+			color:grey;
+		}
+
+		#content .item .unit {
+			font-size:50%;			
+		}
+
+		#footer {
+			font-size: 10pt;
+			padding:5;
+			width:100%;
+			border-top-style:dashed;
+			border-color:white;
+		}
+	</style>
+</head>
+<body>
+	<div id="container">
+		<div id="header">
+			<div class="child" id="location">
+				<div id="value">The Gap Road</div>
+			</div>
+			<div class="child" id="date">
+				<span id="value">--</span>
+			</div>
+			<div class="child" id="time">
+				<span id="value">--</span>
+			</div>
+		</div>
+		<div id="content">
+			<div class="item" id="temperature">
+				<div class="title">Temperature</div>
+				<span id="value">--</span> <span class="unit">&#8451;</span>
+				<div class="minmax">
+					24hr min/max: --/--&#8451;
+				</div>
+			</div>
+			<div class="item" id="humidity">
+				<div class="title">Humidity</div>
+				<span id="value">--</span> <span class="unit">%</span>
+				<div class="minmax">
+					24hr min/max: --/--%
+				</div>
+			</div>
+			<div class="item" id="pressure">
+				<div class="title">Pressure</div>
+				<span id="value">--</span> <span class="unit">mb</span>
+				<div class="minmax">
+					24hr min/max: --/-- mb
+				</div>
+			</div>
+			<div class="item" id="uv_index">
+				<div class="title">UV Index</div>
+				<span id="value">--</span>
+				<div class="minmax">
+					24hr min/max: --/--
+				</div>
+			</div>
+			<div class="item" id="rain">
+				<div class="title">Rain</div>
+				<span id="value">--</span><span class="unit"> mm/h</span>
+				<div class="minmax">
+					24hr total: <span id="value">--</span> mm
+				</div>
+			</div>
+			<div class="item" id="wind">
+				<div class="title">Wind</div>
+				<span id="value">--</span><span class="unit">m/s</span> <span id="direction">--</span>
+				<div class="minmax">
+					24hr min/max: --/-- m/s
+				</div>
+			</div>
+		</div>
+		<div id="footer">
+			Last Received Data: <span id="last_received"><span id="value">--</span></span> | <span id="power">Battery Charge: <span id="value">--</span>%</span>
+		</div>
+	</div>
+</body>
+	<script>
+		function updateDashboard()
+		{
+			$.getJSON( "latest.json", function( data ) {
+				console.log(data);
+
+				bloomsky = data["Data"];
+				storm = data["Storm"];
+
+				$("#temperature #value").html(bloomsky["Temperature"]);
+				$("#humidity #value").html(bloomsky["Humidity"]);
+				$("#pressure #value").html(bloomsky["Pressure"]);
+
+				voltagePct = (parseFloat(bloomsky["Voltage"])/2621.0)*100;
+				uvIndex = storm["UVIndex"];
+
+				$("#uv_index #value").html(uvIndex == 9999 ? "--" : uvIndex)
+				$("#power #value").html(Math.round(voltagePct));
+
+				windSpeed = Math.round(parseFloat(storm["SustainedWindSpeed"]));
+				$("#wind #value").html(windSpeed);
+				$("#wind #direction").html(storm["WindDirection"]);
+
+				$("#rain #value").html(storm["RainRate"]);
+				$("#rain .minmax #value").html(storm["RainDaily"]);
+
+				$("#last_received #value").html(bloomsky["TS"]); // TODO: translate timestamp
+			});
+
+			setTimeout(updateDashboard, 30000);
+		}
+
+		function updateClock()
+		{
+			var now = new Date();
+			$('#time').html(now.format('HH:MM'))
+			$('#date').html(now.format('ddd dd mmm yyyy'))
+			setTimeout(updateClock, 1000);
+		}
+
+		$(function() {
+			$.ajaxSetup({ cache: false });
+		    updateDashboard();
+		    updateClock();
+		});
+	</script>
+</html>
