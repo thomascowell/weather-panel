@@ -284,7 +284,12 @@
 				$("#power #value").html(Math.round(voltagePct));
 
 				var temperatureValues = extractWeeklyChartData(series, "OutdoorTemperature");
+				var humidityValues = extractWeeklyChartData(series, "OutdoorHumidity");
+				var pressureValues = extractWeeklyChartData(series, "Pressure");
+				
 				updateChart(window.chart, "temperature", temperatureValues);
+				updateChart(window.chart, "humidity", humidityValues);
+				updateChart(window.chart, "pressure", pressureValues);
 			});
 
 			setTimeout(updateDashboard, 30000);
@@ -325,28 +330,27 @@
 		        datasets: [{
 		            label: 'Temperature',
 		            data: [],
-		            backgroundColor: 'rgba(192, 192, 0, 0.2)',
-		            borderColor: 'rgba(192, 192, 75, 0.2)',
-		            borderWidth: 1,
-		            //xAxisID: 'temperature',
+		            backgroundColor: 'rgba(192, 75, 75, 0.2)',
+		            borderColor: 'rgba(192, 75, 75, 1.0)',
+		            borderWidth: 2,
 		            yAxisID: 'temperature'
 		        },
-		        // {
-		        //     label: 'Humidity',
-		        //     data: [3, 6, 7, 8, 9, 3, 300],
-		        //     backgroundColor: 'rgba(75, 192, 192, 0.2)',
-		        //     borderColor: 'rgba(75, 192, 192, 0.2)',
-		        //     borderWidth: 1,
-		        //     yAxisID: 'humidity'
-		        // },
-		        // {
-		        //     label: 'Pressure',
-		        //     data: [3, 6, 7, 8, 9, 3, 300],
-		        //     backgroundColor: 'rgba(75, 192, 192, 0.2)',
-		        //     borderColor: 'rgba(75, 192, 192, 0.2)',
-		        //     borderWidth: 1,
-		        //     yAxisID: 'humidity'
-		        // }
+		        {
+		            label: 'Humidity',
+		            data: [],
+		            backgroundColor: 'rgba(20, 192, 200, 0.2)',
+		            borderColor: 'rgba(20, 192, 200, 1.0)',		            
+		            borderWidth: 2,
+		            yAxisID: 'humidity'
+		        },
+		        {
+		            label: 'Pressure',
+		            data: [],
+		            backgroundColor: 'rgba(192, 75, 192, 0.2)',
+		            borderColor: 'rgba(192, 75, 192, 1.0)',
+		            borderWidth: 2,
+		            yAxisID: 'pressure'
+		        },
 		        ]
 		    },
 		    options: {
@@ -357,42 +361,41 @@
 		    	responsive: true,
 		    	stacked: false,
 		    	spanGaps: false,
-		    	legend: {
-		            display: true
-		         },
+		    	legend: { display: true },
+		    	elements: { point: { radius: 0 } },
 		        scales: {
 		        	xAxes: [{
 		        		display: false
 		        	}],
 		            yAxes: [
 		            {
-		            	ticks: { beginAtZero:true },
+		            	ticks: { beginAtZero:false },
 		            	position: 'left',
 		                id: 'temperature',
 		                scaleLabel: {
 		                	padding: 0,
 		                	display: true,
-		                	labelString: 'C'
+		                	labelString: 'Temperature (C)'
 		                }
 		            },
-		            // {
-		            // 	position: 'left',
-		            //     id: 'pressure',
-		            //     scaleLabel: {
-		            //     	padding: 0,
-		            //     	display: true,
-		            //     	labelString: 'mb'
-		            //     }
-		            // },
-		            // {
-		            // 	position: 'right',
-		            // 	id: 'humidity',
-		            // 	scaleLabel: {
-		            //     	padding: 0,
-		            // 		display: true,
-		            //     	labelString: 'pct'
-		            //     }
-		            // }
+		            {
+		            	position: 'right',
+		                id: 'humidity',
+		                scaleLabel: {
+		                	padding: 0,
+		                	display: true,
+		                	labelString: 'Humidity (%)'
+		                }
+		            },
+		            {
+		            	position: 'right',
+		            	id: 'pressure',
+		            	scaleLabel: {
+		                	padding: 0,
+		            		display: true,
+		                	labelString: 'Pressure (mb)'
+		                }
+		            }
 		            ]
 		        }
 		    }
