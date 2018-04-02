@@ -2,6 +2,7 @@
 <head>
 	<script src="jquery-3.2.1.js"></script>
 	<script src="date.format.js"></script>
+	<script src="Chart.js"></script>
 	<style>
 		* { 
 		    -moz-box-sizing: border-box; 
@@ -84,6 +85,10 @@
 			font-size:50%;			
 		}
 
+		#content #wind #direction {
+			font-size:50%;				
+		}
+
 		#footer {
 			font-size: 10pt;
 			padding:5;
@@ -111,43 +116,43 @@
 				<div class="title">Temperature</div>
 				<span id="value">--</span> <span class="unit">&#8451;</span>
 				<div class="minmax">
-					24hr min/max: --/--&#8451;
+					Today's low/high: <span class="min_value">--</span>/<span class="max_value">--</span>&#8451;
 				</div>
 			</div>
 			<div class="item" id="humidity">
 				<div class="title">Humidity</div>
 				<span id="value">--</span> <span class="unit">%</span>
 				<div class="minmax">
-					24hr min/max: --/--%
+					Today's low/high: <span class="min_value">--</span>/<span class="max_value">--</span>%
 				</div>
 			</div>
 			<div class="item" id="pressure">
 				<div class="title">Pressure</div>
 				<span id="value">--</span> <span class="unit">mb</span>
 				<div class="minmax">
-					24hr min/max: --/-- mb
+					Today's low/high: <span class="min_value">--</span>/<span class="max_value">--</span> mb
 				</div>
 			</div>
 			<div class="item" id="uv_index">
 				<div class="title">UV Index</div>
 				<span id="value">--</span>
 				<div class="minmax">
-					24hr min/max: --/--
+					Today's high: <span class="max_value">--</span>
 				</div>
 			</div>
 			<div class="item" id="rain">
-				<div class="title">Rain</div>
-				<span id="value">--</span><span class="unit"> mm/h</span>
-				<div class="minmax">
-					24hr total: <span id="value">--</span> mm
-				</div>
+				<div class="title">Total Rain Today</div>
+				<span id="value">--</span><span class="unit"> mm</span>				
 			</div>
 			<div class="item" id="wind">
 				<div class="title">Wind</div>
 				<span id="value">--</span><span class="unit">m/s</span> <span id="direction">--</span>
 				<div class="minmax">
-					24hr min/max: --/-- m/s
+					Today's high: <span class="max_value">--</span> m/s
 				</div>
+			</div>
+			<div class="item" id="chart" style="border: none; width:100%; height:175px">
+				<canvas id="chart_canvas" width="100%" height="100%"></canvas>
 			</div>
 		</div>
 		<div id="footer">
@@ -156,33 +161,130 @@
 	</div>
 </body>
 	<script>
+		"use strict";
+
+		function getEntryDateTime(entry)
+		{
+			return new Date(entry["UnixTimestampUTC"]*1000);
+		}
+
+		function isToday(ts)
+		{
+			return new Date().toDateString() == ts.toDateString();
+		}
+
+		function isThisWeek(ts)
+		{
+			return true;
+		}
+
+		function calculateDailyMinMax(series, keyname)
+		{
+			var minimum = null;
+			var maximum = null;
+
+			for (var i = 0; i < series.length; ++i)
+			{
+				var entry = series[i];
+				var entryTimestamp = getEntryDateTime(entry);
+				if (!isToday(entryTimestamp))
+					continue;
+
+				if (minimum == null)
+					minimum = entry[keyname];
+				else if (entry[keyname] < minimum)
+					minimum = entry[keyname];
+
+				if (maximum == null)
+					maximum = entry[keyname];
+				else if (entry[keyname] > maximum)
+					maximum = entry[keyname];
+			}
+
+			return [minimum, maximum];
+		}
+
+		function extractWeeklyChartData(series, keyname)
+		{
+			var data = [];
+			for (var i = series.length-1; i >= 0; --i)
+			{
+				var entry = series[i];
+				var entryTimestamp = getEntryDateTime(entry);
+				if (!isThisWeek(entryTimestamp))
+					continue;
+
+				data.push(entry[keyname]);
+			}
+			return data;
+		}
+
+		function updateChart(chart, axisName, values)
+		{
+			for (var i = 0; i < chart.data.datasets.length; i++)
+			{
+				var ds = chart.data.datasets[i];
+				if (ds.yAxisID != axisName)
+					continue;
+
+				var tempDS = ds.data = values;
+				chart.data.labels = values;
+			}
+			
+			chart.update();
+		}
+
 		function updateDashboard()
 		{
-			$.getJSON( "latest.json", function( data ) {
+			$.getJSON( "dataset.json", function( data ) 
+			{
 				console.log(data);
 
-				bloomsky = data["Data"];
-				storm = data["Storm"];
+				var series = data.Entries;
+				var latest = series[0];
+				var latestTimestamp = getEntryDateTime(latest);
 
-				$("#temperature #value").html(bloomsky["Temperature"]);
-				$("#humidity #value").html(bloomsky["Humidity"]);
-				$("#pressure #value").html(bloomsky["Pressure"]);
+				var voltagePct = (parseFloat(latest.BloomskyVoltage)/2621.0)*100;
+				var uvIndex = latest.UVIndex;
+				var windDir = latest.WindDirection;
+				var windSpeed = latest.SustainedWindSpeed;
+				var rainRate = latest.RainRate;
+				var rainDaily = latest.RainDaily;
 
-				voltagePct = (parseFloat(bloomsky["Voltage"])/2621.0)*100;
-				uvIndex = storm["UVIndex"];
+				var [minTemp, maxTemp] = calculateDailyMinMax(series, "OutdoorTemperature");
+				var [minHumidity, maxHumidity] = calculateDailyMinMax(series, "OutdoorHumidity");
+				var [minPressure, maxPressure] = calculateDailyMinMax(series, "Pressure");
+				var [minWindSpeed, maxWindSpeed] = calculateDailyMinMax(series, "SustainedWindSpeed");
+				var [minUVIndex, maxUVIndex] = calculateDailyMinMax(series, "UVIndex");
 
-				$("#uv_index #value").html(uvIndex == 9999 ? "--" : uvIndex)
+
+				$("#temperature #value").html(latest.OutdoorTemperature.toFixed(1));
+				$("#temperature .min_value").html(minTemp == null ? "--" : minTemp.toFixed(1));
+				$("#temperature .max_value").html(maxTemp == null ? "--" : maxTemp.toFixed(1));
+
+				$("#humidity #value").html(latest.OutdoorHumidity);
+				$("#humidity .min_value").html(minHumidity == null ? "--" : minHumidity.toFixed(0));
+				$("#humidity .max_value").html(maxHumidity == null ? "--" : maxHumidity.toFixed(0));
+
+				$("#pressure #value").html(latest.Pressure);
+				$("#pressure .min_value").html(minPressure == null ? "--" : minPressure.toFixed(0));
+				$("#pressure .max_value").html(maxPressure == null ? "--" : maxPressure.toFixed(0));
+				
+				$("#uv_index #value").html(uvIndex == null ? "--" : uvIndex);				
+				$("#uv_index .max_value").html(maxUVIndex == null ? "--" : maxUVIndex);
+
+				$("#wind #value").html(windSpeed == null ? "-- " : windSpeed.toFixed(1));
+				$("#wind #direction").html(windDir == null ? "" : windDir);
+				$("#wind .max_value").html(maxWindSpeed == null ? "--" : maxWindSpeed.toFixed(1));
+
+				$("#rain #value").html(rainRate == null ? "--" : rainRate);
+				$("#rain .minmax #value").html(rainDaily);
+
+				$("#last_received #value").html(latestTimestamp.format('HH:MM dd/mm/yy'));
 				$("#power #value").html(Math.round(voltagePct));
 
-				windSpeed = Math.round(parseFloat(storm["SustainedWindSpeed"]));
-				$("#wind #value").html(windSpeed);
-				$("#wind #direction").html(storm["WindDirection"]);
-
-				$("#rain #value").html(storm["RainRate"]);
-				$("#rain .minmax #value").html(storm["RainDaily"]);
-
-				var lastReceived = new Date(bloomsky["TS"]*1000);
-				$("#last_received #value").html(lastReceived.format('HH:MM dd/mm/yy')); // TODO: translate timestamp
+				var temperatureValues = extractWeeklyChartData(series, "OutdoorTemperature");
+				updateChart(window.chart, "temperature", temperatureValues);
 			});
 
 			setTimeout(updateDashboard, 30000);
@@ -206,12 +308,126 @@
 			var date = new Date(ts*1000);
 		}
 
-		$(function() {
+		$(function()
+		{
 			$.ajaxSetup({ cache: false });
 		    updateDashboard();
 		    updateClock();
 
+		    // Reload the page from time to time in case we've updated code from github in the background.
 		    setTimeout(reloadPage, 1000*60*30);
+
+		    var ctx = document.getElementById("chart_canvas").getContext('2d');
+		    window.chart = new Chart(ctx, {
+		    type: 'line',
+		    data: {
+		        labels: [],
+		        datasets: [{
+		            label: 'Temperature',
+		            data: [],
+		            backgroundColor: 'rgba(192, 192, 0, 0.2)',
+		            borderColor: 'rgba(192, 192, 75, 0.2)',
+		            borderWidth: 1,
+		            //xAxisID: 'temperature',
+		            yAxisID: 'temperature'
+		        },
+		        // {
+		        //     label: 'Humidity',
+		        //     data: [3, 6, 7, 8, 9, 3, 300],
+		        //     backgroundColor: 'rgba(75, 192, 192, 0.2)',
+		        //     borderColor: 'rgba(75, 192, 192, 0.2)',
+		        //     borderWidth: 1,
+		        //     yAxisID: 'humidity'
+		        // },
+		        // {
+		        //     label: 'Pressure',
+		        //     data: [3, 6, 7, 8, 9, 3, 300],
+		        //     backgroundColor: 'rgba(75, 192, 192, 0.2)',
+		        //     borderColor: 'rgba(75, 192, 192, 0.2)',
+		        //     borderWidth: 1,
+		        //     yAxisID: 'humidity'
+		        // }
+		        ]
+		    },
+		    options: {
+		    	animation: {
+			        duration: 0
+			    },
+		    	maintainAspectRatio: false,
+		    	responsive: true,
+		    	stacked: false,
+		    	spanGaps: false,
+		    	legend: {
+		            display: true
+		         },
+		        scales: {
+		        	xAxes: [{
+		        		display: false
+		        	}],
+		            yAxes: [
+		            {
+		            	ticks: { beginAtZero:true },
+		            	position: 'left',
+		                id: 'temperature',
+		                scaleLabel: {
+		                	padding: 0,
+		                	display: true,
+		                	labelString: 'C'
+		                }
+		            },
+		            // {
+		            // 	position: 'left',
+		            //     id: 'pressure',
+		            //     scaleLabel: {
+		            //     	padding: 0,
+		            //     	display: true,
+		            //     	labelString: 'mb'
+		            //     }
+		            // },
+		            // {
+		            // 	position: 'right',
+		            // 	id: 'humidity',
+		            // 	scaleLabel: {
+		            //     	padding: 0,
+		            // 		display: true,
+		            //     	labelString: 'pct'
+		            //     }
+		            // }
+		            ]
+		        }
+		    }
 		});
+
+		// var chartData = {
+		//     labels: ["January", "February", "March", "April", "May", "June"],
+		//     datasets: [
+		//         {
+		//             fillColor: "#79D1CF",
+		//             strokeColor: "#79D1CF",
+		//             data: [60, 80, 81, 56, 55, 40]
+		//         }
+		//     ]
+		// };
+
+		// var myLine = new Chart(ctx).Line(chartData, {
+		//     showTooltips: false
+		//     // onAnimationComplete: function () {
+
+		//     //     var ctx = this.chart.ctx;
+		//     //     ctx.font = this.scale.font;
+		//     //     ctx.fillStyle = this.scale.textColor
+		//     //     ctx.textAlign = "center";
+		//     //     ctx.textBaseline = "bottom";
+
+		//     //     this.datasets.forEach(function (dataset) {
+		//     //         dataset.points.forEach(function (points) {
+		//     //             ctx.fillText(points.value, points.x, points.y - 10);
+		//     //         });
+		//     //     })
+		//     // }
+		// });
+	});
+
+
 	</script>
 </html>
