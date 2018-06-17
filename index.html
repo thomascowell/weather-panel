@@ -277,8 +277,7 @@
 				$("#wind #direction").html(windDir == null ? "" : windDir);
 				$("#wind .max_value").html(maxWindSpeed == null ? "--" : maxWindSpeed.toFixed(1));
 
-				$("#rain #value").html(rainRate == null ? "--" : rainRate);
-				$("#rain .minmax #value").html(rainDaily);
+				$("#rain #value").html(rainDaily == null ? "--" : rainDaily);
 
 				$("#last_received #value").html(latestTimestamp.format('HH:MM dd/mm/yy'));
 				$("#power #value").html(Math.round(voltagePct));
